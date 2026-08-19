@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customers - Grocery Admin</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="logo">
+            <div class="logo-icon"><i class="fa-solid fa-basket-shopping"></i></div>
+            <h2>FreshAdmin</h2>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/overview"><i class="fa-solid fa-chart-pie"></i> Overview</a></li>
+            <li><a href="/dashboard"><i class="fa-solid fa-box-open"></i> Products</a></li>
+            <li><a href="/orders"><i class="fa-solid fa-cart-arrow-down"></i> Orders POS</a></li>
+            <li class="active"><a href="/customers"><i class="fa-solid fa-users"></i> Customers</a></li>
+            <li><a href="/analytics"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
+        </ul>
+        <div class="bottom-links">
+            <li><a href="#"><i class="fa-solid fa-gear"></i> Settings</a></li>
+            <li><a href="/api/logout" class="logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</a></li>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="searchInput" placeholder="Search customers by name or phone...">
+            </div>
+            <div class="topbar-right">
+                <div class="notification-icon" onclick="toggleNotifications()">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="badge" id="notificationBadge" style="display:none;">0</span>
+                    
+                    <div class="notification-dropdown" id="notificationDropdown">
+                        <div class="dropdown-header">
+                            <h3>Notifications</h3>
+                            <button id="clearNotifications">Clear All</button>
+                        </div>
+                        <div class="dropdown-body" id="notificationList">
+                            <div style="padding:20px; text-align:center; color: #94a3b8;">No alerts right now.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="user-profile">
+                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=10b981&color=fff" alt="Profile">
+                    <span>Admin User</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dynamic Header Stats -->
+        <div class="dashboard-cards" style="padding-bottom: 10px;">
+            <div class="card">
+                <div class="card-icon blue"><i class="fa-solid fa-users"></i></div>
+                <div class="card-info">
+                    <h3>Total Customers</h3>
+                    <h2 id="totalCustomersCount">0</h2>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-icon green"><i class="fa-solid fa-star"></i></div>
+                <div class="card-info">
+                    <h3>Active Members</h3>
+                    <h2 id="activeMembersCount">0</h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customers Section -->
+        <div class="inventory-section">
+            <div class="section-header">
+                <h2>Customer Directory</h2>
+                <div class="header-actions">
+                    <select id="discountFilter" class="filter-select">
+                        <option value="All">All Discounts</option>
+                        <option value="None">No Discount</option>
+                        <option value="5% Off">5% Off - Silver</option>
+                        <option value="10% Off">10% Off - Gold</option>
+                        <option value="Free Delivery">Free Delivery</option>
+                    </select>
+                    <button class="add-btn" onclick="openModal('add')"><i class="fa-solid fa-user-plus"></i> Add Customer</button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="customersTable">
+                    <thead>
+                        <tr>
+                            <th>Customer Name</th>
+                            <th>Contact Info</th>
+                            <th>Address</th>
+                            <th>Preferred Discount</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Rows will be populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal for Add/Edit Customer -->
+    <div class="modal-overlay" id="customerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add New Customer</h2>
+                <button class="close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="customerForm">
+                <input type="hidden" id="customerId">
+                <input type="hidden" id="actionType">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="customerName" required placeholder="e.g. Rahul Sharma">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Mobile Number</label>
+                        <input type="tel" id="customerMobile" required placeholder="+91 XXXXXXXXXX">
+                    </div>
+                    <div class="form-group">
+                        <label>Email ID (Optional)</label>
+                        <input type="email" id="customerEmail" placeholder="customer@example.com">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Delivery Address</label>
+                    <input type="text" id="customerAddress" required placeholder="123 Main St, Apartment 4B, City">
+                </div>
+                
+                <div class="form-group">
+                    <label>Preferred Discount Plan</label>
+                    <select id="customerDiscount" required style="background: rgba(16, 185, 129, 0.1); border-color: #10b981; font-weight: 500;">
+                        <option value="None">Regular (No Discount)</option>
+                        <option value="5% Off">5% Off - Silver Tier</option>
+                        <option value="10% Off">10% Off - Gold Tier</option>
+                        <option value="Free Delivery">Free Delivery - Local</option>
+                    </select>
+                    <small style="color: var(--text-secondary); margin-top: 5px; display: block;">Select the specific discount or promotional attribute this customer receives at checkout.</small>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="save-btn" id="saveBtn">Save Customer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Showing Customer Purchase History -->
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 id="historyModalTitle">Purchase History</h2>
+                <button class="close-btn" onclick="closeHistoryModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 10px; border: 1px solid var(--border-color);">
+                <div>
+                    <div style="font-size: 13px; color: var(--text-secondary);">Lifetime Value</div>
+                    <div id="historyLifetimeValue" style="font-size: 20px; font-weight: 700; color: var(--accent-color);">₹0.00</div>
+                </div>
+                <div>
+                    <div style="font-size: 13px; color: var(--text-secondary);">Total Orders</div>
+                    <div id="historyTotalOrders" style="font-size: 20px; font-weight: 700;">0</div>
+                </div>
+            </div>
+            <div class="table-container" style="max-height: 300px; overflow-y: auto;">
+                <table style="width: 100%; text-align: left; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <th style="padding: 10px; font-size: 12px; color: var(--text-secondary);">Date</th>
+                            <th style="padding: 10px; font-size: 12px; color: var(--text-secondary);">Items</th>
+                            <th style="padding: 10px; font-size: 12px; color: var(--text-secondary);">Total</th>
+                            <th style="padding: 10px; font-size: 12px; color: var(--text-secondary);">Payment</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <!-- History rows injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/customers.js"></script>
+</body>
+</html>

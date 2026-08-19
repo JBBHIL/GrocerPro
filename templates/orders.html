@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orders POS - Grocery Admin</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+    <link rel="stylesheet" href="/static/orders.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="logo">
+            <div class="logo-icon"><i class="fa-solid fa-basket-shopping"></i></div>
+            <h2>FreshAdmin</h2>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/overview"><i class="fa-solid fa-chart-pie"></i> Overview</a></li>
+            <li><a href="/dashboard"><i class="fa-solid fa-box-open"></i> Products</a></li>
+            <li class="active"><a href="/orders"><i class="fa-solid fa-cart-arrow-down"></i> Orders POS</a></li>
+            <li><a href="/customers"><i class="fa-solid fa-users"></i> Customers</a></li>
+            <li><a href="/analytics"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
+        </ul>
+        <div class="bottom-links">
+            <li><a href="#"><i class="fa-solid fa-gear"></i> Settings</a></li>
+            <li><a href="/api/logout" class="logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</a></li>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="posSearch" placeholder="Search products directly for order...">
+            </div>
+            <div class="topbar-right">
+                <div class="notification-icon">
+                    <i class="fa-regular fa-bell"></i>
+                </div>
+                <div class="user-profile">
+                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=10b981&color=fff" alt="Profile">
+                    <span>Admin User</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- POS Layout -->
+        <div class="pos-container">
+            
+            <!-- Left Side: Product Menu -->
+            <div class="pos-menu" style="flex: 2;">
+                <div class="pos-header">
+                    <h2>Calculate Purchases</h2>
+                    <select id="posCategory" class="filter-select">
+                        <option value="All">All Categories</option>
+                        <option value="Fruits">Fruits</option>
+                        <option value="Vegetables">Vegetables</option>
+                        <option value="Dairy">Dairy</option>
+                        <option value="Meat">Meat</option>
+                        <option value="Bakery">Bakery</option>
+                    </select>
+                </div>
+                <div class="pos-grid" id="posProductGrid">
+                    <!-- Products inject here -->
+                </div>
+            </div>
+
+            <!-- Right Side: Order Summary & Customer Info -->
+            <div class="pos-cart" style="flex: 1; min-width: 380px;">
+                <h2 style="margin-bottom: 20px;">Order Details</h2>
+                
+                <!-- Items in Cart -->
+                <div class="cart-items" id="cartItems" style="max-height: 250px; overflow-y: auto;">
+                    <!-- Empty state -->
+                    <div class="empty-cart" id="emptyCart">
+                        <i class="fa-solid fa-basket-shopping" style="font-size: 30px; margin-bottom: 10px; opacity: 0.5;"></i>
+                        <p>Cart is empty</p>
+                    </div>
+                </div>
+
+                <!-- Calculation Summary -->
+                <div class="cart-summary">
+                    <div class="summary-line">
+                        <span>Subtotal</span>
+                        <span id="calcSubtotal">₹0.00</span>
+                    </div>
+                    <div class="summary-line">
+                        <span>Taxes (5%)</span>
+                        <span id="calcTax">₹0.00</span>
+                    </div>
+                    <div class="summary-total">
+                        <span>Total Checkout</span>
+                        <span id="calcTotal" style="color: var(--accent-color);">₹0.00</span>
+                    </div>
+                </div>
+
+                <!-- Customer Info Form -->
+                <div class="customer-info-box" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); margin-top: 20px;">
+                    <h3 style="font-size: 14px; margin-bottom: 15px; color: var(--text-secondary);"><i class="fa-solid fa-address-card"></i> Customer Information</h3>
+                    
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <input type="text" id="manualCustName" placeholder="Customer Name (Required)" required style="padding: 10px; font-size: 13px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <input type="text" id="manualCustMobile" placeholder="Mobile Number (Required)" required style="padding: 10px; font-size: 13px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <textarea id="manualCustAddress" placeholder="Full Address" rows="2" style="width: 100%; padding: 10px; background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-size: 13px; outline: none; resize: none;"></textarea>
+                    </div>
+
+                    <!-- Payment & Submit -->
+                    <label style="font-size: 13px; margin-bottom: 8px; display: block;">Payment Method</label>
+                    <div class="payment-methods" style="margin-bottom: 15px;">
+                        <button class="pay-btn active" data-method="Cash"><i class="fa-solid fa-money-bill-wave"></i> Cash</button>
+                        <button class="pay-btn" data-method="Card"><i class="fa-regular fa-credit-card"></i> Card</button>
+                        <button class="pay-btn" data-method="UPI">UPI</button>
+                    </div>
+
+                    <button class="checkout-btn" id="confirmOrderBtn" disabled>
+                        <i class="fa-solid fa-check"></i> Complete Order
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Receipt Modal -->
+    <div class="modal-overlay" id="receiptModal">
+        <div class="modal-content" style="max-width: 450px; text-align: center; padding: 30px;">
+            <div style="font-size: 50px; color: var(--accent-color); margin-bottom: 20px;">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h2 style="margin-bottom: 10px;">Order Saved Successfully</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 20px;" id="receiptMsg">Customer data transferred to dashboard.</p>
+            
+            <div style="background: rgba(16, 185, 129, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                <h3 style="color: var(--accent-color);">Total Calculated: <span id="receiptTotal">₹0.00</span></h3>
+            </div>
+            
+            <p style="color: var(--info); font-size: 13px; margin-bottom: 20px;">
+                <i class="fa-solid fa-database"></i> Customer added to Customers Dashboard & Purchase saved to Analytics.
+            </p>
+            
+            <button class="save-btn" style="width: 100%; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-primary);" onclick="startNewOrder()">Start Next Order</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/dashboard.js"></script> 
+    <script src="/static/customers.js"></script> 
+    <script src="/static/orders.js"></script>
+</body>
+</html>

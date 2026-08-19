@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - Grocery Admin</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="logo">
+            <div class="logo-icon"><i class="fa-solid fa-basket-shopping"></i></div>
+            <h2>FreshAdmin</h2>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/overview"><i class="fa-solid fa-chart-pie"></i> Overview</a></li>
+            <li><a href="/dashboard"><i class="fa-solid fa-box-open"></i> Products</a></li>
+            <li><a href="/orders"><i class="fa-solid fa-cart-arrow-down"></i> Orders POS</a></li>
+            <li><a href="/customers"><i class="fa-solid fa-users"></i> Customers</a></li>
+            <li class="active"><a href="/analytics"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
+        </ul>
+        <div class="bottom-links">
+            <li><a href="#"><i class="fa-solid fa-gear"></i> Settings</a></li>
+            <li><a href="/api/logout" class="logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</a></li>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="analyticsSearch" placeholder="Search orders by customer or ID...">
+            </div>
+            <div class="topbar-right">
+                <div class="notification-icon" onclick="toggleNotifications()">
+                    <i class="fa-regular fa-bell"></i>
+                    <div class="badge" id="notificationBadge" style="display: none;">0</div>
+                    
+                    <!-- Notification Dropdown -->
+                    <div class="notification-dropdown" id="notificationDropdown">
+                        <div class="dropdown-header">
+                            <h3>Alerts</h3>
+                            <button id="clearNotifications">Clear</button>
+                        </div>
+                        <div class="dropdown-body" id="notificationList">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+                </div>
+                <div class="user-profile">
+                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=10b981&color=fff" alt="Profile">
+                    <span>Admin User</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Cards -->
+        <div class="dashboard-cards">
+            <div class="card">
+                <div class="card-icon blue"><i class="fa-solid fa-receipt"></i></div>
+                <div class="card-info">
+                    <h3>Total Orders</h3>
+                    <h2 id="totalOrdersCount">0</h2>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-icon green"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+                <div class="card-info">
+                    <h3>Total Revenue</h3>
+                    <h2 id="totalRevenue">₹0.00</h2>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-icon orange"><i class="fa-solid fa-boxes-stacked"></i></div>
+                <div class="card-info">
+                    <h3>Items Sold</h3>
+                    <h2 id="totalItemsSold">0</h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="inventory-section">
+            <div class="section-header">
+                <h2>Customer Purchase History</h2>
+                <div class="header-actions">
+                    <select id="paymentFilter" class="filter-select">
+                        <option value="All">All Payment Methods</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Card">Card</option>
+                        <option value="UPI">UPI</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="analyticsTable">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Date & Time</th>
+                            <th>Customer Name</th>
+                            <th>Purchased Items</th>
+                            <th>Total Amount</th>
+                            <th>Payment Method</th>
+                        </tr>
+                    </thead>
+                    <tbody id="analyticsTableBody">
+                        <!-- Populated via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="/static/dashboard.js"></script> <!-- To get products DB + Toast function -->
+    <script src="/static/analytics.js"></script>
+</body>
+</html>

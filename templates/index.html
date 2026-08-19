@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grocery Admin - Login</title>
+    <link rel="stylesheet" href="/static/style.css?v=1.0.2">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <!-- Background Elements -->
+    <div class="background-shape shape-1"></div>
+    <div class="background-shape shape-2"></div>
+    <div class="background-shape shape-3"></div>
+
+    <div class="auth-wrapper">
+        <!-- Left Side Panel (Branding & Stats) -->
+        <div class="auth-side-panel">
+            <div class="brand-details">
+                <span class="brand-logo-container">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                </span>
+                <h1>FreshAdmin Portal</h1>
+                <p>The ultimate control center for fresh grocery operations. Monitor inventory levels, handle bulk order processing, manage customer accounts, and access sales metrics in real-time.</p>
+            </div>
+            
+            <div class="side-stats">
+                <div class="stat-card">
+                    <h3>24/7</h3>
+                    <p>Live Monitoring</p>
+                </div>
+                <div class="stat-card">
+                    <h3>10k+</h3>
+                    <p>Active Products</p>
+                </div>
+                <div class="stat-card">
+                    <h3><i class="fa-solid fa-bolt"></i> Fast</h3>
+                    <p>Auto-Restock</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side Panel (Interactive Auth Forms) -->
+        <div class="auth-form-panel">
+            <div class="form-box">
+                <!-- Login Form -->
+                <form id="login-form" class="input-group">
+                    <div class="header-text">
+                        <div class="login-logo">
+                            <i class="fa-solid fa-boxes-stacked"></i>
+                        </div>
+                        <h2>Login</h2>
+                        <h3>Welcome Back</h3>
+                    </div>
+                    <div class="input-field">
+                        <input type="text" class="input-ctrl" id="login-username" placeholder="Username" required>
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="input-field">
+                        <input type="text" class="input-ctrl" id="login-client-id" placeholder="Client ID" required>
+                        <i class="fa-solid fa-id-card"></i>
+                    </div>
+                    <div class="input-field">
+                        <input type="password" class="input-ctrl" id="login-password" placeholder="Password" required>
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <div class="options">
+                        <label><input type="checkbox" id="login-remember"> Remember me</label>
+                        <a href="#" id="forgot-link">Forgot Password?</a>
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" class="submit-btn" id="login-btn" style="flex: 1;">Log In <i class="fa-solid fa-arrow-right"></i></button>
+                        <button type="button" class="submit-btn secondary-btn" id="go-register-btn" style="flex: 1;">Sign Up <i class="fa-solid fa-user-plus"></i></button>
+                    </div>
+                </form>
+
+                <!-- Register Form -->
+                <form id="register-form" class="input-group hidden-form">
+                    <div class="header-text">
+                        <div class="login-logo">
+                            <i class="fa-solid fa-user-plus"></i>
+                        </div>
+                        <h2>Create Account</h2>
+                        <h3>Register as a new manager</h3>
+                    </div>
+                    <div class="input-field">
+                        <input type="text" class="input-ctrl" id="reg-name" placeholder="Full Name" required>
+                        <i class="fa-solid fa-id-badge"></i>
+                    </div>
+                    <div class="input-field">
+                        <input type="text" class="input-ctrl" id="reg-username" placeholder="Username" required>
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="input-field">
+                        <input type="text" class="input-ctrl" id="reg-client-id" placeholder="Client ID" required>
+                        <i class="fa-solid fa-id-card"></i>
+                    </div>
+                    <div class="input-field">
+                        <input type="email" class="input-ctrl" id="reg-email" placeholder="Email Id" required>
+                        <i class="fa-solid fa-envelope"></i>
+                    </div>
+                    <div class="input-field">
+                        <input type="password" class="input-ctrl" id="reg-password" placeholder="Password" required>
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <button type="submit" class="submit-btn" id="reg-btn" style="margin-bottom: 15px;">Sign Up <i class="fa-solid fa-arrow-right"></i></button>
+                    <div class="options" style="justify-content: center;">
+                        <span>Already have an account? <a href="#" id="go-login-from-reg">Log In</a></span>
+                    </div>
+                </form>
+
+                <!-- Forgot Password Form -->
+                <form id="forgot-form" class="input-group hidden-form">
+                    <div class="header-text">
+                        <div class="login-logo">
+                            <i class="fa-solid fa-key"></i>
+                        </div>
+                        <h2>Forgot Password</h2>
+                        <h3>Verify username and email</h3>
+                    </div>
+                    <div class="input-field">
+                        <input type="text" class="input-ctrl" id="forgot-username" placeholder="Username" required>
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="input-field">
+                        <input type="email" class="input-ctrl" id="forgot-email" placeholder="Email Address" required>
+                        <i class="fa-solid fa-envelope"></i>
+                    </div>
+                    <button type="submit" class="submit-btn" id="forgot-btn" style="margin-bottom: 15px;">Send Code <i class="fa-solid fa-paper-plane"></i></button>
+                    <div class="options" style="justify-content: center;">
+                        <a href="#" id="go-login-from-forgot">Back to Log In</a>
+                    </div>
+                </form>
+
+                <!-- Reset Password Form -->
+                <form id="reset-form" class="input-group hidden-form">
+                    <div class="header-text">
+                        <div class="login-logo">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <h2>Reset Password</h2>
+                        <h3>Enter verification code</h3>
+                    </div>
+                    <div class="input-field">
+                        <input type="text" class="input-ctrl" id="reset-code" placeholder="6-digit Code" required maxlength="6">
+                        <i class="fa-solid fa-hashtag"></i>
+                    </div>
+                    <div class="input-field">
+                        <input type="password" class="input-ctrl" id="reset-new-password" placeholder="New Password" required>
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <div class="input-field">
+                        <input type="password" class="input-ctrl" id="reset-confirm-password" placeholder="Confirm Password" required>
+                        <i class="fa-solid fa-check-double"></i>
+                    </div>
+                    <button type="submit" class="submit-btn" id="reset-btn" style="margin-bottom: 15px;">Reset Password <i class="fa-solid fa-check"></i></button>
+                    <div class="options" style="justify-content: center;">
+                        <a href="#" id="go-login-from-reset">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js?v=1.0.2"></script>
+</body>
+
+</html>

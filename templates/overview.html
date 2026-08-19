@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overview - Grocery Admin</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .overview-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            padding: 40px;
+            margin-top: 40px;
+        }
+
+        .overview-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .overview-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 4px;
+            background: linear-gradient(90deg, var(--accent-color), var(--info));
+        }
+
+        .overview-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .overview-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            background: -webkit-linear-gradient(135deg, var(--accent-color), var(--info));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .overview-title {
+            font-size: 20px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .overview-value {
+            font-size: 64px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="logo">
+            <div class="logo-icon"><i class="fa-solid fa-basket-shopping"></i></div>
+            <h2>FreshAdmin</h2>
+        </div>
+        <ul class="nav-links">
+            <li class="active"><a href="/overview"><i class="fa-solid fa-chart-pie"></i> Overview</a></li>
+            <li><a href="/dashboard"><i class="fa-solid fa-box-open"></i> Products</a></li>
+            <li><a href="/orders"><i class="fa-solid fa-cart-arrow-down"></i> Orders POS</a></li>
+            <li><a href="/customers"><i class="fa-solid fa-users"></i> Customers</a></li>
+            <li><a href="/analytics"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
+        </ul>
+        <div class="bottom-links">
+            <li><a href="#"><i class="fa-solid fa-gear"></i> Settings</a></li>
+            <li><a href="/api/logout" class="logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</a></li>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Topbar -->
+        <header class="topbar">
+            <div>
+                <h1 style="font-size: 24px; font-weight: 600;">Today's Overview</h1>
+                <p style="color: var(--text-secondary); font-size: 14px;" id="currentDateDisplay">Loading date...</p>
+            </div>
+            <div class="topbar-right">
+                <div class="user-profile">
+                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=10b981&color=fff" alt="Profile">
+                    <span>Admin User</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Big Overview Stats -->
+        <div class="overview-cards">
+            <div class="overview-card">
+                <i class="fa-solid fa-users-viewfinder overview-icon"></i>
+                <div class="overview-title">Total Customers Today</div>
+                <div class="overview-value" id="todayCustomers">0</div>
+            </div>
+            <div class="overview-card">
+                <i class="fa-solid fa-indian-rupee-sign overview-icon" style="background: -webkit-linear-gradient(135deg, var(--warning), var(--accent-hover)); -webkit-background-clip: text;"></i>
+                <div class="overview-title">Total Payment Today</div>
+                <div class="overview-value" id="todayRevenue">₹0.00</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="/static/overview.js"></script>
+</body>
+</html>

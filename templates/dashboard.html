@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grocery Admin Dashboard</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="logo">
+            <div class="logo-icon"><i class="fa-solid fa-basket-shopping"></i></div>
+            <h2>FreshAdmin</h2>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/overview"><i class="fa-solid fa-chart-pie"></i> Overview</a></li>
+            <li class="active"><a href="/dashboard"><i class="fa-solid fa-box-open"></i> Products</a></li>
+            <li><a href="/orders"><i class="fa-solid fa-cart-arrow-down"></i> Orders POS</a></li>
+            <li><a href="/customers"><i class="fa-solid fa-users"></i> Customers</a></li>
+            <li><a href="/analytics"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
+        </ul>
+        <div class="bottom-links">
+            <li><a href="#"><i class="fa-solid fa-gear"></i> Settings</a></li>
+            <li><a href="/api/logout" class="logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</a></li>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="searchInput" placeholder="Search products...">
+            </div>
+            <div class="topbar-right">
+                <div class="notification-icon" onclick="toggleNotifications()">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="badge" id="notificationBadge">0</span>
+                    
+                    <!-- Notification Dropdown -->
+                    <div class="notification-dropdown" id="notificationDropdown">
+                        <div class="dropdown-header">
+                            <h3>Notifications</h3>
+                            <button id="clearNotifications">Clear All</button>
+                        </div>
+                        <div class="dropdown-body" id="notificationList">
+                            <!-- Notifications inject here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="user-profile">
+                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=10b981&color=fff" alt="Profile">
+                    <span>Admin User</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Widgets -->
+        <div class="dashboard-cards">
+            <div class="card">
+                <div class="card-icon blue"><i class="fa-solid fa-layer-group"></i></div>
+                <div class="card-info">
+                    <h3>Total Products</h3>
+                    <h2 id="totalProductsCount">0</h2>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-icon orange"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div class="card-info">
+                    <h3>Low Stock</h3>
+                    <h2 id="lowStockCount">0</h2>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-icon red"><i class="fa-solid fa-cart-shopping"></i></div>
+                <div class="card-info">
+                    <h3>Items Sold Today</h3>
+                    <h2 id="itemsSoldToday">0</h2>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-icon green"><i class="fa-solid fa-sack-dollar"></i></div>
+                <div class="card-info">
+                    <h3>Payment Today</h3>
+                    <h2 id="totalPaymentToday">₹0.00</h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Section -->
+        <div class="inventory-section">
+            <div class="section-header">
+                <h2>Inventory Management</h2>
+                <div class="header-actions">
+                    <div class="view-toggles">
+                        <button class="view-btn active" id="tableViewBtn" onclick="switchView('table')"><i class="fa-solid fa-list"></i></button>
+                        <button class="view-btn" id="gridViewBtn" onclick="switchView('grid')"><i class="fa-solid fa-border-all"></i></button>
+                    </div>
+                    <select id="categoryFilter" class="filter-select">
+                        <option value="All">All Categories</option>
+                        <option value="Fruits">Fruits</option>
+                        <option value="Vegetables">Vegetables</option>
+                        <option value="Dairy">Dairy</option>
+                        <option value="Meat">Meat</option>
+                        <option value="Bakery">Bakery</option>
+                    </select>
+                    <button class="add-btn" onclick="openModal('add')"><i class="fa-solid fa-plus"></i> Add Product</button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="inventoryTable">
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Category</th>
+                            <th>Unit Price</th>
+                            <th>Stock Qty</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Rows will be populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="gridContainer" class="product-grid" style="display: none;">
+                <!-- Cards will be populated by JS -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal for Add/Edit Product & Add Stock -->
+    <div class="modal-overlay" id="productModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add New Product</h2>
+                <button class="close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="productForm">
+                <input type="hidden" id="productId">
+                <input type="hidden" id="actionType">
+                
+                <div class="form-group" id="nameGroup">
+                    <label>Product Name</label>
+                    <input type="text" id="productName" required placeholder="e.g. Organic Apples">
+                </div>
+                <div class="form-group" id="categoryGroup">
+                    <label>Category</label>
+                    <select id="productCategory" required>
+                        <option value="Fruits">Fruits</option>
+                        <option value="Vegetables">Vegetables</option>
+                        <option value="Dairy">Dairy</option>
+                        <option value="Meat">Meat</option>
+                        <option value="Bakery">Bakery</option>
+                        <option value="Pantry">Pantry</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="imageGroup">
+                    <label>Product Image (Optional)</label>
+                    <div class="image-upload-wrapper">
+                        <input type="file" id="productImage" accept="image/*" class="file-input">
+                        <label for="productImage" class="file-label">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Choose an Image
+                        </label>
+                        <span id="fileNameDisplay" class="file-name">No file chosen</span>
+                    </div>
+                    <!-- Hidden field to store base64 string -->
+                    <input type="hidden" id="productImageData">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Price (₹)</label>
+                        <input type="number" id="productPrice" step="0.01" min="0" required placeholder="0.00">
+                    </div>
+                    <div class="form-group" id="stockGroup">
+                        <label>Stock Quantity</label>
+                        <input type="number" id="productStock" min="0" required placeholder="Quantity">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="save-btn" id="saveBtn">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/dashboard.js"></script>
+</body>
+</html>
