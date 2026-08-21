@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Overview - Grocery Admin</title>
+    <title>Today's Selling - Grocery Admin</title>
     <link rel="stylesheet" href="/static/dashboard.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -76,9 +76,9 @@
             <h2>FreshAdmin</h2>
         </div>
         <ul class="nav-links">
-            <li class="active"><a href="/overview"><i class="fa-solid fa-chart-pie"></i> Overview</a></li>
+            <li class="active"><a href="/overview"><i class="fa-solid fa-chart-pie"></i> Today's Selling</a></li>
             <li><a href="/dashboard"><i class="fa-solid fa-box-open"></i> Products</a></li>
-            <li><a href="/orders"><i class="fa-solid fa-cart-arrow-down"></i> Orders POS</a></li>
+            <li><a href="/orders"><i class="fa-solid fa-cart-arrow-down"></i> Orders</a></li>
             <li><a href="/customers"><i class="fa-solid fa-users"></i> Customers</a></li>
             <li><a href="/analytics"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
         </ul>
@@ -93,7 +93,7 @@
         <!-- Topbar -->
         <header class="topbar">
             <div>
-                <h1 style="font-size: 24px; font-weight: 600;">Today's Overview</h1>
+                <h1 style="font-size: 24px; font-weight: 600;">Today's Selling</h1>
                 <p style="color: var(--text-secondary); font-size: 14px;" id="currentDateDisplay">Loading date...</p>
             </div>
             <div class="topbar-right">
@@ -115,6 +115,29 @@
                 <i class="fa-solid fa-indian-rupee-sign overview-icon" style="background: -webkit-linear-gradient(135deg, var(--warning), var(--accent-hover)); -webkit-background-clip: text;"></i>
                 <div class="overview-title">Total Payment Today</div>
                 <div class="overview-value" id="todayRevenue">₹0.00</div>
+            </div>
+        </div>
+
+        <!-- Past Customer Order History Table -->
+        <div style="padding: 0 40px 40px;">
+            <div class="section-header" style="margin-bottom: 24px;">
+                <h2 style="font-size: 20px; font-weight: 600; color: var(--text-primary)">Past Customer Billings</h2>
+            </div>
+            <div class="table-container">
+                <table id="pastOrdersTable">
+                    <thead>
+                        <tr>
+                            <th>Bill ID / Date</th>
+                            <th>Customer Details</th>
+                            <th>Items Purchased</th>
+                            <th>Payment</th>
+                            <th>Bill Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pastOrdersTableBody">
+                        <!-- Rows populated by JS -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </main>

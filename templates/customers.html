@@ -16,9 +16,9 @@
             <h2>FreshAdmin</h2>
         </div>
         <ul class="nav-links">
-            <li><a href="/overview"><i class="fa-solid fa-chart-pie"></i> Overview</a></li>
+            <li><a href="/overview"><i class="fa-solid fa-chart-pie"></i> Today's Selling</a></li>
             <li><a href="/dashboard"><i class="fa-solid fa-box-open"></i> Products</a></li>
-            <li><a href="/orders"><i class="fa-solid fa-cart-arrow-down"></i> Orders POS</a></li>
+            <li><a href="/orders"><i class="fa-solid fa-cart-arrow-down"></i> Orders</a></li>
             <li class="active"><a href="/customers"><i class="fa-solid fa-users"></i> Customers</a></li>
             <li><a href="/analytics"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
         </ul>
@@ -68,10 +68,17 @@
                 </div>
             </div>
             <div class="card">
-                <div class="card-icon green"><i class="fa-solid fa-star"></i></div>
+                <div class="card-icon orange"><i class="fa-solid fa-clock-rotate-left"></i></div>
                 <div class="card-info">
-                    <h3>Active Members</h3>
-                    <h2 id="activeMembersCount">0</h2>
+                    <h3>Past Customers</h3>
+                    <h2 id="pastCustomersCount">0</h2>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-icon green"><i class="fa-solid fa-user-clock"></i></div>
+                <div class="card-info">
+                    <h3>Today's Customers</h3>
+                    <h2 id="todayCustomersCount">0</h2>
                 </div>
             </div>
         </div>
@@ -103,7 +110,7 @@
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody">
+                    <tbody id="customersTableBody">
                         <!-- Rows will be populated by JS -->
                     </tbody>
                 </table>

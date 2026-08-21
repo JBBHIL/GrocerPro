@@ -29,12 +29,148 @@ const fileNameDisplay = document.getElementById('fileNameDisplay');
 const hiddenImageData = document.getElementById('productImageData');
 
 let currentView = 'table'; // Track active view state
+let activeCardFilter = 'all'; // 'all', 'low_stock', 'sold_today'
 
 // Initialize Dashboard
 function init() {
-    if (tableBody) renderTable();
+    setupCardListeners();
+    if (tableBody) renderDashboardView();
     if (document.getElementById('totalProductsCount')) updateDashboardStats();
     if (document.getElementById('notificationBadge')) checkStockAlerts();
+}
+
+function setupCardListeners() {
+    const cardTotal = document.getElementById('cardTotalProducts');
+    const cardLow = document.getElementById('cardLowStock');
+    const cardSold = document.getElementById('cardItemsSoldToday');
+
+    if (cardTotal) {
+        cardTotal.addEventListener('click', () => setActiveCard('all'));
+    }
+    if (cardLow) {
+        cardLow.addEventListener('click', () => setActiveCard('low_stock'));
+    }
+    if (cardSold) {
+        cardSold.addEventListener('click', () => setActiveCard('sold_today'));
+    }
+}
+
+function setActiveCard(filter) {
+    activeCardFilter = filter;
+    
+    // Toggle active classes on cards
+    const cardTotal = document.getElementById('cardTotalProducts');
+    const cardLow = document.getElementById('cardLowStock');
+    const cardSold = document.getElementById('cardItemsSoldToday');
+    
+    if (cardTotal) cardTotal.classList.toggle('active', filter === 'all');
+    if (cardLow) cardLow.classList.toggle('active', filter === 'low_stock');
+    if (cardSold) cardSold.classList.toggle('active', filter === 'sold_today');
+    
+    renderDashboardView();
+}
+
+function renderDashboardView() {
+    const titleEl = document.getElementById('sectionTitle');
+    const actionsEl = document.getElementById('inventoryActions');
+    const invTableContainer = document.getElementById('inventoryTableContainer');
+    const salesTableContainer = document.getElementById('salesTableContainer');
+    
+    if (activeCardFilter === 'sold_today') {
+        if (titleEl) titleEl.innerText = "Today's Customer Orders & Bills";
+        if (actionsEl) actionsEl.style.display = 'none';
+        if (invTableContainer) invTableContainer.style.display = 'none';
+        if (gridContainer) gridContainer.style.display = 'none';
+        if (salesTableContainer) salesTableContainer.style.display = 'block';
+        renderSalesTable();
+    } else {
+        if (titleEl) {
+            titleEl.innerText = activeCardFilter === 'low_stock' ? "Inventory Management - Low Stock" : "Inventory Management";
+        }
+        if (actionsEl) actionsEl.style.display = 'flex';
+        
+        if (currentView === 'table') {
+            if (invTableContainer) invTableContainer.style.display = 'block';
+            if (gridContainer) gridContainer.style.display = 'none';
+        } else {
+            if (invTableContainer) invTableContainer.style.display = 'none';
+            if (gridContainer) gridContainer.style.display = 'grid';
+        }
+        if (salesTableContainer) salesTableContainer.style.display = 'none';
+        renderTable();
+    }
+}
+
+function renderSalesTable() {
+    const salesTableBody = document.getElementById('salesTableBody');
+    if (!salesTableBody) return;
+    
+    const orders = JSON.parse(localStorage.getItem('grocery_orders')) || [];
+    const customers = JSON.parse(localStorage.getItem('grocery_customers')) || [];
+    
+    const today = new Date().toLocaleDateString();
+    const todayOrders = orders.filter(order => {
+        return new Date(order.date).toLocaleDateString() === today;
+    });
+
+    salesTableBody.innerHTML = '';
+
+    if (todayOrders.length === 0) {
+        salesTableBody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 30px;">
+                    No items sold today.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    todayOrders.forEach(order => {
+        // Find customer details from registry
+        const custInfo = customers.find(c => c.name.toLowerCase() === order.customerName.toLowerCase()) || {
+            mobile: 'N/A',
+            address: 'Walk-in Customer'
+        };
+
+        const timeStr = new Date(order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        // Generate items list display
+        const itemsHtml = order.items.map(item => `
+            <div class="sales-item-badge">
+                <span>${item.name}</span>
+                <strong style="color: var(--accent-color)">x${item.qty}</strong>
+                <span style="color: var(--text-secondary)">(${formatCurrency(item.price)})</span>
+            </div>
+        `).join('');
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>
+                <strong>#${order.orderId}</strong>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">${timeStr}</div>
+            </td>
+            <td>
+                <div class="sales-customer-info">
+                    <strong>${order.customerName}</strong>
+                    <span class="phone"><i class="fa-solid fa-phone" style="font-size: 10px; margin-right: 4px;"></i>${custInfo.mobile}</span>
+                    <span class="address"><i class="fa-solid fa-location-dot" style="font-size: 10px; margin-right: 4px;"></i>${custInfo.address || 'No Address'}</span>
+                </div>
+            </td>
+            <td>
+                <div class="sales-items-list">
+                    ${itemsHtml}
+                </div>
+            </td>
+            <td>
+                <span class="status-badge status-instock">${order.paymentMethod || 'Cash'}</span>
+            </td>
+            <td>
+                <strong style="color: var(--text-primary); font-size: 16px;">${formatCurrency(order.totalAmount)}</strong>
+            </td>
+        `;
+        salesTableBody.appendChild(tr);
+    });
 }
 
 // Render Table
@@ -46,7 +182,8 @@ function renderTable() {
     const filteredProducts = products.filter(p => {
         const matchesSearch = p.name.toLowerCase().includes(searchTerm);
         const matchesCategory = category === 'All' || p.category === category;
-        return matchesSearch && matchesCategory;
+        const matchesStockFilter = activeCardFilter !== 'low_stock' || (p.stock > 0 && p.stock <= 5);
+        return matchesSearch && matchesCategory && matchesStockFilter;
     });
 
     tableBody.innerHTML = '';
@@ -137,14 +274,7 @@ function switchView(view) {
     currentView = view;
     document.getElementById('tableViewBtn').classList.toggle('active', view === 'table');
     document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
-    
-    if (view === 'table') {
-        document.querySelector('.table-container').style.display = 'block';
-        gridContainer.style.display = 'none';
-    } else {
-        document.querySelector('.table-container').style.display = 'none';
-        gridContainer.style.display = 'grid';
-    }
+    renderDashboardView();
 }
 
 // Update Dashboard Statistics

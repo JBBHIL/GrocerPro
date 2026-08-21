@@ -1,3 +1,6 @@
+// Utility format helper
+const formatCurrency = (amount) => `₹${parseFloat(amount).toFixed(2)}`;
+
 document.addEventListener('DOMContentLoaded', () => {
     // Show current date beautifully
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -39,7 +42,85 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Formatting currency and animating
     document.getElementById('todayRevenue').innerText = `₹${parseFloat(revenueToday).toFixed(2)}`;
+
+    // Render historical customer orders and billings list
+    renderPastOrders(orders);
 });
+
+// Render historical orders
+function renderPastOrders(orders) {
+    const pastOrdersTableBody = document.getElementById('pastOrdersTableBody');
+    if (!pastOrdersTableBody) return;
+
+    const customers = JSON.parse(localStorage.getItem('grocery_customers')) || [];
+
+    // Sort orders descending by date (newest first)
+    const sortedOrders = [...orders].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    pastOrdersTableBody.innerHTML = '';
+
+    if (sortedOrders.length === 0) {
+        pastOrdersTableBody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 30px;">
+                    No past sales found.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    sortedOrders.forEach(order => {
+        // Find customer details from registry
+        const custInfo = customers.find(c => c.name.toLowerCase() === order.customerName.toLowerCase()) || {
+            mobile: 'N/A',
+            address: 'Walk-in Customer'
+        };
+
+        const dateStr = new Date(order.date).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+        const timeStr = new Date(order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        // Generate items list display
+        const itemsHtml = order.items.map(item => `
+            <div class="sales-item-badge" style="margin-right: 4px; margin-bottom: 4px;">
+                <span>${item.name}</span>
+                <strong style="color: var(--accent-color)">x${item.qty}</strong>
+                <span style="color: var(--text-secondary)">(${formatCurrency(item.price)})</span>
+            </div>
+        `).join('');
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>
+                <strong>#${order.orderId}</strong>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">${dateStr} ${timeStr}</div>
+            </td>
+            <td>
+                <div class="sales-customer-info">
+                    <strong>${order.customerName}</strong>
+                    <span class="phone"><i class="fa-solid fa-phone" style="font-size: 10px; margin-right: 4px;"></i>${custInfo.mobile}</span>
+                    <span class="address"><i class="fa-solid fa-location-dot" style="font-size: 10px; margin-right: 4px;"></i>${custInfo.address || 'No Address'}</span>
+                </div>
+            </td>
+            <td>
+                <div class="sales-items-list" style="flex-flow: wrap; flex-direction: row;">
+                    ${itemsHtml}
+                </div>
+            </td>
+            <td>
+                <span class="status-badge status-instock">${order.paymentMethod || 'Cash'}</span>
+            </td>
+            <td>
+                <strong style="color: var(--text-primary); font-size: 16px;">${formatCurrency(order.totalAmount)}</strong>
+            </td>
+        `;
+        pastOrdersTableBody.appendChild(tr);
+    });
+}
 
 // Helper for beautiful number counting animation
 function animateValue(id, start, end, duration) {

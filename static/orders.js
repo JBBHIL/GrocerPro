@@ -17,6 +17,86 @@ const confirmBtn = document.getElementById('confirmOrderBtn');
 function initPOS() {
     renderPOSGrid();
     updateCartUI();
+    
+    // Load saved machine endpoint from localStorage
+    const savedEndpoint = localStorage.getItem('qr_machine_endpoint');
+    const inputEl = document.getElementById('machineEndpointInput');
+    if (savedEndpoint && inputEl) {
+        inputEl.value = savedEndpoint;
+    }
+    
+    setupMachineListeners();
+}
+
+function pushQrToMachine(amount, upiUrl) {
+    const inputEl = document.getElementById('machineEndpointInput');
+    const statusLabel = document.getElementById('qrStatusLabel');
+    if (!inputEl) return;
+    
+    const endpoint = inputEl.value.trim();
+    if (!endpoint) {
+        if (statusLabel) {
+            statusLabel.innerHTML = `<span style="color: var(--text-secondary);">Scan QR on dashboard or configure display machine</span>`;
+        }
+        return;
+    }
+    
+    // Save to localStorage
+    localStorage.setItem('qr_machine_endpoint', endpoint);
+    
+    if (statusLabel) {
+        statusLabel.innerHTML = `<span style="color: var(--info);"><i class="fa-solid fa-spinner fa-spin"></i> Pushing bill to machine display...</span>`;
+    }
+    
+    // Send an HTTP request to the local machine screen endpoint
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const targetUrl = `${endpoint}?amount=${amount}&upi=${encodeURIComponent(upiUrl)}`;
+    
+    fetch(targetUrl, { signal: controller.signal, mode: 'no-cors' })
+        .then(() => {
+            clearTimeout(timeoutId);
+            if (statusLabel) {
+                statusLabel.innerHTML = `<span style="color: var(--accent-color); font-weight: 500;"><i class="fa-solid fa-circle-check"></i> Pushed to QR Machine Screen!</span>`;
+            }
+            showToast('success', 'Machine Synced', `Pushed bill of ₹${amount} to display machine.`);
+        })
+        .catch(err => {
+            clearTimeout(timeoutId);
+            console.error('Device display push failed:', err);
+            if (err.name === 'AbortError') {
+                if (statusLabel) {
+                    statusLabel.innerHTML = `<span style="color: var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i> Sync Timeout. Device offline?</span>`;
+                }
+                showToast('error', 'Sync Timeout', 'QR machine display did not respond.');
+            } else {
+                if (statusLabel) {
+                    statusLabel.innerHTML = `<span style="color: var(--accent-color); font-weight: 500;"><i class="fa-solid fa-circle-check"></i> Pushed to QR Machine Screen!</span>`;
+                }
+            }
+        });
+}
+
+function setupMachineListeners() {
+    const pushBtn = document.getElementById('pushToMachineBtn');
+    const inputEl = document.getElementById('machineEndpointInput');
+    
+    if (pushBtn) {
+        pushBtn.addEventListener('click', () => {
+            const totals = calculateTotals();
+            const merchantUpi = "freshadmin@paytm";
+            const merchantName = "FreshAdmin";
+            const amount = totals.total.toFixed(2);
+            const upiUrl = `upi://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`;
+            pushQrToMachine(amount, upiUrl);
+        });
+    }
+    
+    if (inputEl) {
+        inputEl.addEventListener('change', () => {
+            localStorage.setItem('qr_machine_endpoint', inputEl.value.trim());
+        });
+    }
 }
 
 // Render Products Grid
@@ -107,7 +187,44 @@ function checkFormValidity() {
     const missingName = nameInput.value.trim() === '';
     const missingPhone = mobileInput.value.trim() === '';
 
-    confirmBtn.disabled = missingItems || missingName || missingPhone;
+    let missingPaymentInfo = false;
+    if (paymentMethod === 'Card') {
+        const cardNum = document.getElementById('cardNumberInput').value.trim();
+        missingPaymentInfo = cardNum === '';
+    } else if (paymentMethod === 'UPI') {
+        const upiId = document.getElementById('upiIdInput').value.trim();
+        missingPaymentInfo = upiId === '';
+    }
+
+    confirmBtn.disabled = missingItems || missingName || missingPhone || missingPaymentInfo;
+}
+
+function updatePaymentDetailsFields() {
+    const cardContainer = document.getElementById('cardDetailsContainer');
+    const upiContainer = document.getElementById('upiDetailsContainer');
+    const qrImg = document.getElementById('upiQrCode');
+
+    if (paymentMethod === 'Card') {
+        if (cardContainer) cardContainer.style.display = 'block';
+        if (upiContainer) upiContainer.style.display = 'none';
+    } else if (paymentMethod === 'UPI') {
+        if (cardContainer) cardContainer.style.display = 'none';
+        if (upiContainer) upiContainer.style.display = 'block';
+
+        // Update QR code source with exact total amount
+        const totals = calculateTotals();
+        const merchantUpi = "freshadmin@paytm";
+        const merchantName = "FreshAdmin";
+        const amount = totals.total.toFixed(2);
+        const upiUrl = `upi://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`;
+        if (qrImg) qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUrl)}`;
+        
+        // Auto push to display machine
+        pushQrToMachine(amount, upiUrl);
+    } else {
+        if (cardContainer) cardContainer.style.display = 'none';
+        if (upiContainer) upiContainer.style.display = 'none';
+    }
 }
 
 // Draw cart
@@ -147,6 +264,7 @@ function updateCartUI() {
     document.getElementById('calcTax').innerText = formatCurrency(totals.tax);
     document.getElementById('calcTotal').innerText = formatCurrency(totals.total);
     
+    updatePaymentDetailsFields();
     checkFormValidity();
 }
 
@@ -157,6 +275,8 @@ document.querySelectorAll('.pay-btn').forEach(btn => {
         const target = e.currentTarget;
         target.classList.add('active');
         paymentMethod = target.getAttribute('data-method');
+        updatePaymentDetailsFields();
+        checkFormValidity();
     });
 });
 
@@ -166,6 +286,10 @@ mobileInput.addEventListener('input', checkFormValidity);
 posSearch.addEventListener('input', renderPOSGrid);
 posCategory.addEventListener('change', renderPOSGrid);
 
+const cardInput = document.getElementById('cardNumberInput');
+const upiInput = document.getElementById('upiIdInput');
+if (cardInput) cardInput.addEventListener('input', checkFormValidity);
+if (upiInput) upiInput.addEventListener('input', checkFormValidity);
 
 // On Form Complete + Sync to other dashboads 
 confirmBtn.addEventListener('click', () => {
@@ -185,7 +309,7 @@ confirmBtn.addEventListener('click', () => {
 
     // 2. Add Customer to Customers DB
     // (We will check if they exist by phone, and if not append them)
-    let theCustomers = JSON.parse(localStorage.getItem('grocery_customers')) || [];
+    let theCustomers = JSON.parse(localStorage.getItem('grocery_customers')) || (typeof customers !== 'undefined' ? customers : []);
     const exists = theCustomers.find(c => c.mobile === custMobile);
     
     if(!exists) {
@@ -203,11 +327,20 @@ confirmBtn.addEventListener('click', () => {
 
     // 3. Add to Analytics DB
     const orderHistory = JSON.parse(localStorage.getItem('grocery_orders')) || [];
+    let methodDisplay = paymentMethod;
+    if (paymentMethod === 'Card') {
+        const cardVal = document.getElementById('cardNumberInput').value.trim();
+        methodDisplay = `Card (*${cardVal.slice(-4)})`;
+    } else if (paymentMethod === 'UPI') {
+        const upiVal = document.getElementById('upiIdInput').value.trim();
+        methodDisplay = `UPI (${upiVal})`;
+    }
+
     orderHistory.push({
         orderId: Math.random().toString(36).substr(2, 9).toUpperCase(),
         date: new Date().toISOString(),
         customerName: custName,
-        paymentMethod: paymentMethod,
+        paymentMethod: methodDisplay,
         items: cart.map(item => ({ name: item.name, qty: item.qty, price: item.price })),
         totalAmount: totals.total
     });
@@ -215,7 +348,7 @@ confirmBtn.addEventListener('click', () => {
 
     // Show visual confirmation
     document.getElementById('receiptTotal').innerText = formatCurrency(totals.total);
-    document.getElementById('receiptMsg').innerText = `Processed ${paymentMethod} payment for ${custName}.`;
+    document.getElementById('receiptMsg').innerText = `Processed ${methodDisplay} payment for ${custName}.`;
     document.getElementById('receiptModal').classList.add('show');
     
     renderPOSGrid(); 
@@ -228,6 +361,11 @@ function startNewOrder() {
     mobileInput.value = '';
     addrInput.value = '';
     
+    const cardInputEl = document.getElementById('cardNumberInput');
+    const upiInputEl = document.getElementById('upiIdInput');
+    if (cardInputEl) cardInputEl.value = '';
+    if (upiInputEl) upiInputEl.value = '';
+
     document.querySelectorAll('.pay-btn').forEach(b => b.classList.remove('active'));
     document.querySelector('.pay-btn[data-method="Cash"]').classList.add('active');
     paymentMethod = 'Cash';

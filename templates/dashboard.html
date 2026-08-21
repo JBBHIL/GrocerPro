@@ -16,9 +16,9 @@
             <h2>FreshAdmin</h2>
         </div>
         <ul class="nav-links">
-            <li><a href="/overview"><i class="fa-solid fa-chart-pie"></i> Overview</a></li>
+            <li><a href="/overview"><i class="fa-solid fa-chart-pie"></i> Today's Selling</a></li>
             <li class="active"><a href="/dashboard"><i class="fa-solid fa-box-open"></i> Products</a></li>
-            <li><a href="/orders"><i class="fa-solid fa-cart-arrow-down"></i> Orders POS</a></li>
+            <li><a href="/orders"><i class="fa-solid fa-cart-arrow-down"></i> Orders</a></li>
             <li><a href="/customers"><i class="fa-solid fa-users"></i> Customers</a></li>
             <li><a href="/analytics"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
         </ul>
@@ -61,28 +61,28 @@
 
         <!-- Dashboard Widgets -->
         <div class="dashboard-cards">
-            <div class="card">
+            <div class="card active blue" id="cardTotalProducts">
                 <div class="card-icon blue"><i class="fa-solid fa-layer-group"></i></div>
                 <div class="card-info">
                     <h3>Total Products</h3>
                     <h2 id="totalProductsCount">0</h2>
                 </div>
             </div>
-            <div class="card">
+            <div class="card orange" id="cardLowStock">
                 <div class="card-icon orange"><i class="fa-solid fa-triangle-exclamation"></i></div>
                 <div class="card-info">
                     <h3>Low Stock</h3>
                     <h2 id="lowStockCount">0</h2>
                 </div>
             </div>
-            <div class="card">
+            <div class="card red" id="cardItemsSoldToday">
                 <div class="card-icon red"><i class="fa-solid fa-cart-shopping"></i></div>
                 <div class="card-info">
                     <h3>Items Sold Today</h3>
                     <h2 id="itemsSoldToday">0</h2>
                 </div>
             </div>
-            <div class="card">
+            <div class="card green" id="cardPaymentToday">
                 <div class="card-icon green"><i class="fa-solid fa-sack-dollar"></i></div>
                 <div class="card-info">
                     <h3>Payment Today</h3>
@@ -94,8 +94,8 @@
         <!-- Inventory Section -->
         <div class="inventory-section">
             <div class="section-header">
-                <h2>Inventory Management</h2>
-                <div class="header-actions">
+                <h2 id="sectionTitle">Inventory Management</h2>
+                <div class="header-actions" id="inventoryActions">
                     <div class="view-toggles">
                         <button class="view-btn active" id="tableViewBtn" onclick="switchView('table')"><i class="fa-solid fa-list"></i></button>
                         <button class="view-btn" id="gridViewBtn" onclick="switchView('grid')"><i class="fa-solid fa-border-all"></i></button>
@@ -112,7 +112,7 @@
                 </div>
             </div>
 
-            <div class="table-container">
+            <div class="table-container" id="inventoryTableContainer">
                 <table id="inventoryTable">
                     <thead>
                         <tr>
@@ -132,6 +132,24 @@
 
             <div id="gridContainer" class="product-grid" style="display: none;">
                 <!-- Cards will be populated by JS -->
+            </div>
+
+            <!-- New Sales/Customers Today Table Container -->
+            <div class="table-container" id="salesTableContainer" style="display: none;">
+                <table id="salesTable">
+                    <thead>
+                        <tr>
+                            <th>Bill ID / Time</th>
+                            <th>Customer Info</th>
+                            <th>Items Purchased</th>
+                            <th>Payment</th>
+                            <th>Bill Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salesTableBody">
+                        <!-- Rows populated by JS -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </main>

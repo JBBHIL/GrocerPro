@@ -84,8 +84,29 @@ function renderCustomersTable() {
 // Update Dashboard Statistics
 function updateCustomerStats() {
     document.getElementById('totalCustomersCount').innerText = customers.length;
-    const activeWithDiscount = customers.filter(c => c.discount !== 'None').length;
-    document.getElementById('activeMembersCount').innerText = activeWithDiscount;
+
+    const orders = JSON.parse(localStorage.getItem('grocery_orders')) || [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const todayNames = new Set();
+    const pastNames = new Set();
+
+    orders.forEach(order => {
+        const orderDate = new Date(order.date);
+        if (orderDate >= today) {
+            todayNames.add(order.customerName.toLowerCase());
+        } else {
+            pastNames.add(order.customerName.toLowerCase());
+        }
+    });
+
+    if (document.getElementById('pastCustomersCount')) {
+        document.getElementById('pastCustomersCount').innerText = pastNames.size;
+    }
+    if (document.getElementById('todayCustomersCount')) {
+        document.getElementById('todayCustomersCount').innerText = todayNames.size;
+    }
 }
 
 // Modal Logic
