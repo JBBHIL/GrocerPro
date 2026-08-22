@@ -1,13 +1,18 @@
 // Utility format helper
 const formatCurrency = (amount) => `₹${parseFloat(amount).toFixed(2)}`;
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Show current date beautifully
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('en-IN', options);
+let isInitialLoad = true;
 
+async function refreshOverviewData() {
     // Calculate Today's Stats from Analytics
-    const orders = JSON.parse(localStorage.getItem('grocery_orders')) || [];
+    let orders = [];
+    try {
+        const res = await fetch('/api/orders');
+        const data = await res.json();
+        if (data.success) orders = data.orders;
+    } catch (err) {
+        console.error('Failed to load orders:', err);
+    }
     
     // Get start of today
     const today = new Date();
@@ -26,9 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (orderDate >= today) {
             revenueToday += order.totalAmount;
             
-            // Optional: Count unique customers only, or count every transaction as a "customer". 
-            // The prompt says "how many customer come today", usually interpreted as transactions or distinct names.
-            // We'll count distinct names:
+            // Count distinct names:
             if (!uniqueCustomersToday.includes(order.customerName)) {
                 uniqueCustomersToday.push(order.customerName);
             }
@@ -37,25 +40,67 @@ document.addEventListener('DOMContentLoaded', () => {
 
     customersTodayCount = uniqueCustomersToday.length;
 
-    // Animate numbers for visual flair
-    animateValue("todayCustomers", 0, customersTodayCount, 1500);
+    // Animate numbers for visual flair only on initial load
+    if (isInitialLoad) {
+        animateValue("todayCustomers", 0, customersTodayCount, 1500);
+        isInitialLoad = false;
+    } else {
+        const custEl = document.getElementById('todayCustomers');
+        if (custEl) custEl.innerText = customersTodayCount;
+    }
     
-    // Formatting currency and animating
-    document.getElementById('todayRevenue').innerText = `₹${parseFloat(revenueToday).toFixed(2)}`;
+    // Formatting currency
+    const revEl = document.getElementById('todayRevenue');
+    if (revEl) {
+        revEl.innerText = `₹${parseFloat(revenueToday).toFixed(2)}`;
+    }
 
     // Render historical customer orders and billings list
-    renderPastOrders(orders);
+    await renderPastOrders(orders);
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // Show current date beautifully
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const dateEl = document.getElementById('currentDateDisplay');
+    if (dateEl) {
+        dateEl.innerText = new Date().toLocaleDateString('en-IN', options);
+    }
+
+    await refreshOverviewData();
 });
 
+// Periodic background refresh every 5 seconds for overview page (runs only if tab is visible)
+setInterval(async () => {
+    if (document.hidden) return;
+    await refreshOverviewData();
+}, 5000);
+
 // Render historical orders
-function renderPastOrders(orders) {
+async function renderPastOrders(orders) {
     const pastOrdersTableBody = document.getElementById('pastOrdersTableBody');
     if (!pastOrdersTableBody) return;
 
-    const customers = JSON.parse(localStorage.getItem('grocery_customers')) || [];
+    let customers = [];
+    try {
+        const res = await fetch('/api/customers');
+        const data = await res.json();
+        if (data.success) customers = data.customers;
+    } catch (err) {
+        console.error('Failed to load customer profiles:', err);
+    }
+
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+
+    // Filter to only today's orders
+    const todayOrders = orders.filter(order => order.date.startsWith(todayStr));
 
     // Sort orders descending by date (newest first)
-    const sortedOrders = [...orders].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const sortedOrders = [...todayOrders].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     pastOrdersTableBody.innerHTML = '';
 
@@ -63,7 +108,7 @@ function renderPastOrders(orders) {
         pastOrdersTableBody.innerHTML = `
             <tr>
                 <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 30px;">
-                    No past sales found.
+                    No sales recorded today.
                 </td>
             </tr>
         `;

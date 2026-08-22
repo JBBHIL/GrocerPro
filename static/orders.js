@@ -14,7 +14,10 @@ const posSearch = document.getElementById('posSearch');
 const posCategory = document.getElementById('posCategory');
 const confirmBtn = document.getElementById('confirmOrderBtn');
 
-function initPOS() {
+async function initPOS() {
+    if (typeof loadProductsFromServer !== 'undefined') {
+        await loadProductsFromServer();
+    }
     renderPOSGrid();
     updateCartUI();
     
@@ -292,41 +295,36 @@ if (cardInput) cardInput.addEventListener('input', checkFormValidity);
 if (upiInput) upiInput.addEventListener('input', checkFormValidity);
 
 // On Form Complete + Sync to other dashboads 
-confirmBtn.addEventListener('click', () => {
+confirmBtn.addEventListener('click', async () => {
     const totals = calculateTotals();
     const custName = nameInput.value.trim();
     const custMobile = mobileInput.value.trim();
     const custAddr = addrInput.value.trim();
 
-    // 1. Decrement Stock from Main DB
-    cart.forEach(cartItem => {
-        const productIndex = products.findIndex(p => p.id === cartItem.id);
-        if(productIndex > -1) {
-            products[productIndex].stock -= cartItem.qty; 
+    // 1. Save / Register Customer to Customers SQLite DB if not exists
+    try {
+        const custRes = await fetch('/api/customers');
+        const custData = await custRes.json();
+        if (custData.success) {
+            const exists = custData.customers.find(c => c.mobile === custMobile);
+            if (!exists) {
+                await fetch('/api/customers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: custName,
+                        mobile: custMobile,
+                        address: custAddr,
+                        discount: "None"
+                    })
+                });
+            }
         }
-    });
-    saveProducts(); // provided by dashboard.js
-
-    // 2. Add Customer to Customers DB
-    // (We will check if they exist by phone, and if not append them)
-    let theCustomers = JSON.parse(localStorage.getItem('grocery_customers')) || (typeof customers !== 'undefined' ? customers : []);
-    const exists = theCustomers.find(c => c.mobile === custMobile);
-    
-    if(!exists) {
-        const newId = theCustomers.length > 0 ? Math.max(...theCustomers.map(c => c.id)) + 1 : 1;
-        theCustomers.unshift({
-            id: newId,
-            name: custName,
-            mobile: custMobile,
-            email: "", // Not asked for based on prompt
-            address: custAddr,
-            discount: "None"
-        });
-        localStorage.setItem('grocery_customers', JSON.stringify(theCustomers));
+    } catch (err) {
+        console.error('Failed to sync customer details:', err);
     }
 
-    // 3. Add to Analytics DB
-    const orderHistory = JSON.parse(localStorage.getItem('grocery_orders')) || [];
+    // 2. Prepare Payment Method Display
     let methodDisplay = paymentMethod;
     if (paymentMethod === 'Card') {
         const cardVal = document.getElementById('cardNumberInput').value.trim();
@@ -336,22 +334,81 @@ confirmBtn.addEventListener('click', () => {
         methodDisplay = `UPI (${upiVal})`;
     }
 
-    orderHistory.push({
+    // 3. Save Order to Backend SQLite DB (which also handles stock reduction)
+    const orderPayload = {
         orderId: Math.random().toString(36).substr(2, 9).toUpperCase(),
         date: new Date().toISOString(),
         customerName: custName,
         paymentMethod: methodDisplay,
         items: cart.map(item => ({ name: item.name, qty: item.qty, price: item.price })),
         totalAmount: totals.total
-    });
-    localStorage.setItem('grocery_orders', JSON.stringify(orderHistory));
+    };
 
-    // Show visual confirmation
-    document.getElementById('receiptTotal').innerText = formatCurrency(totals.total);
-    document.getElementById('receiptMsg').innerText = `Processed ${methodDisplay} payment for ${custName}.`;
-    document.getElementById('receiptModal').classList.add('show');
-    
-    renderPOSGrid(); 
+    try {
+        const orderRes = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(orderPayload)
+        });
+        const orderData = await orderRes.json();
+        if (orderData.success) {
+            // Show visual confirmation
+            document.getElementById('receiptTotal').innerText = formatCurrency(totals.total);
+            document.getElementById('receiptMsg').innerText = `Processed ${methodDisplay} payment for ${custName}.`;
+            document.getElementById('receiptModal').classList.add('show');
+            
+            // 4. Send WhatsApp Invoice Receipt
+            try {
+                let cleanPhone = custMobile.replace(/[\s\-\+\(\)]/g, '');
+                if (cleanPhone.length === 10) {
+                    cleanPhone = '91' + cleanPhone; // India code fallback
+                }
+                
+                const itemsListStr = cart.map(item => `- ${item.qty}x ${item.name} (${formatCurrency(item.price * item.qty)})`).join('\n');
+                const formattedDate = new Date().toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                const waMessage = `Hello *${custName}*,\nThank you for shopping at *GrocerPro*! 🛒\n\n*Order ID:* #${orderPayload.orderId}\n*Date:* ${formattedDate}\n\n*Items Purchased:*\n${itemsListStr}\n\n*Total Invoice:* ${formatCurrency(totals.total)}\n*Payment Method:* ${methodDisplay}\n\nHave a wonderful day! ✨`;
+                
+                // Try sending directly through backend Express Microservice
+                fetch('http://localhost:5001/api/send-receipt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: cleanPhone, message: waMessage })
+                })
+                .then(res => res.json())
+                .then(resData => {
+                    if (resData.success) {
+                        showToast('success', 'WhatsApp Sent', 'Receipt sent to customer via Cloud API.');
+                    } else {
+                        console.warn('Backend API failed, falling back to Web WhatsApp:', resData.message);
+                        window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`, '_blank');
+                    }
+                })
+                .catch(err => {
+                    console.warn('Backend service offline, falling back to Web WhatsApp:', err);
+                    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`, '_blank');
+                });
+            } catch (waErr) {
+                console.error('Failed to trigger WhatsApp process:', waErr);
+            }
+        } else {
+            showToast('error', 'Error', orderData.message);
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('error', 'Network Error', 'Failed to save transaction to backend.');
+    }
+
+    if (typeof loadProductsFromServer !== 'undefined') {
+        await loadProductsFromServer();
+    }
+    renderPOSGrid();
 });
 
 function startNewOrder() {
@@ -360,7 +417,6 @@ function startNewOrder() {
     nameInput.value = '';
     mobileInput.value = '';
     addrInput.value = '';
-    
     const cardInputEl = document.getElementById('cardNumberInput');
     const upiInputEl = document.getElementById('upiIdInput');
     if (cardInputEl) cardInputEl.value = '';
@@ -375,3 +431,43 @@ function startNewOrder() {
 
 // Ignition
 initPOS();
+
+// Periodic background refresh every 5 seconds for orders POS (runs only if tab is visible)
+setInterval(async () => {
+    if (document.hidden) return;
+    if (typeof loadProductsFromServer === 'function') {
+        await loadProductsFromServer();
+        
+        // Check if any product's stock decreased and affects the items currently in the cart
+        let cartChanged = false;
+        // Iterate backwards since we might splice items out of the cart
+        for (let i = cart.length - 1; i >= 0; i--) {
+            const item = cart[i];
+            const serverProd = products.find(p => p.id === item.id);
+            if (serverProd) {
+                if (serverProd.stock < item.qty) {
+                    if (serverProd.stock === 0) {
+                        cart.splice(i, 1);
+                        cartChanged = true;
+                        if (typeof showToast === 'function') {
+                            showToast('warning', 'Item Out of Stock', `${item.name} is now out of stock.`);
+                        }
+                    } else {
+                        item.qty = serverProd.stock;
+                        cartChanged = true;
+                        if (typeof showToast === 'function') {
+                            showToast('warning', 'Stock Quantity Reduced', `${item.name} stock level decreased. Adjusted cart quantity to ${serverProd.stock}.`);
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (typeof renderPOSGrid === 'function') {
+            renderPOSGrid();
+        }
+        if (cartChanged && typeof updateCartUI === 'function') {
+            updateCartUI();
+        }
+    }
+}, 5000);

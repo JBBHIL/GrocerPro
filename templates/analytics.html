@@ -13,7 +13,7 @@
     <nav class="sidebar">
         <div class="logo">
             <div class="logo-icon"><i class="fa-solid fa-basket-shopping"></i></div>
-            <h2>FreshAdmin</h2>
+            <h2>GrocerPro</h2>
         </div>
         <ul class="nav-links">
             <li><a href="/overview"><i class="fa-solid fa-chart-pie"></i> Today's Selling</a></li>
@@ -53,8 +53,8 @@
                     </div>
                 </div>
                 <div class="user-profile">
-                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=10b981&color=fff" alt="Profile">
-                    <span>Admin User</span>
+                    <img src="https://ui-avatars.com/api/?name={{ session.get('name', 'Admin+User')|urlencode }}&background=10b981&color=fff" alt="Profile">
+                    <span>{{ session.get('name', 'Admin User') }}</span>
                 </div>
             </div>
         </header>

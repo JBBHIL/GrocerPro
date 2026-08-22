@@ -7,24 +7,70 @@ const defaultCustomers = [
     { id: 5, name: "Vikram Singh", mobile: "+91 99887 76655", email: "vikram@mail.in", address: "H.No 45, Phase 2, Chandigarh", discount: "None" }
 ];
 
-let customers = JSON.parse(localStorage.getItem('grocery_customers')) || defaultCustomers;
+let customers = [];
+
+// Load customers from backend SQLite
+async function loadCustomersFromServer() {
+    try {
+        const res = await fetch('/api/customers');
+        const data = await res.json();
+        if (data.success) {
+            customers = data.customers;
+        }
+    } catch (err) {
+        console.error('Failed to load customers:', err);
+    }
+}
 
 // Utility functions
-const saveCustomers = () => localStorage.setItem('grocery_customers', JSON.stringify(customers));
+const saveCustomers = () => {}; // No-op now as database manages persistence
 const generateId = () => customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : 1;
 const getAvatar = (name) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&rounded=true`;
 
 // Elements
 const custTableBody = document.getElementById('customersTableBody');
-const custSearchInput = document.getElementById('searchCustomerInput'); // changed ID to prevent collision if needed, but lets just use unique var
+const custSearchInput = document.getElementById('searchInput');
 const custDiscountFilter = document.getElementById('discountFilter');
 const custModal = document.getElementById('customerModal');
 const custForm = document.getElementById('customerForm');
 
+let activeFilter = 'today';
+const todaysBuyerNames = new Set();
+const pastBuyerNames = new Set();
+
 // Initialize Dashboard
-function initCustomers() {
+async function initCustomers() {
+    await loadCustomersFromServer();
+    
+    // Set up card click handlers
+    const cardTodays = document.getElementById('cardTodays');
+    const cardPast = document.getElementById('cardPast');
+    
+    if (cardTodays) {
+        cardTodays.addEventListener('click', () => {
+            activeFilter = 'today';
+            document.getElementById('directoryTitle').innerText = "Today's Customers";
+            cardTodays.style.background = 'rgba(16, 185, 129, 0.05)';
+            cardPast.style.background = 'transparent';
+            renderCustomersTable();
+        });
+    }
+    
+    if (cardPast) {
+        cardPast.addEventListener('click', () => {
+            activeFilter = 'past';
+            document.getElementById('directoryTitle').innerText = "Past Customers";
+            cardPast.style.background = 'rgba(245, 158, 11, 0.05)';
+            cardTodays.style.background = 'transparent';
+            renderCustomersTable();
+        });
+    }
+    
+    // Highlight today card initially
+    if (cardTodays) cardTodays.style.background = 'rgba(16, 185, 129, 0.05)';
+
+    await updateCustomerStats();
     if (custTableBody) renderCustomersTable();
-    if (document.getElementById('totalCustomersCount')) updateCustomerStats();
 }
 
 // Render Table
@@ -37,11 +83,25 @@ function renderCustomersTable() {
     const filteredCustomers = customers.filter(c => {
         const matchesSearch = c.name.toLowerCase().includes(searchTerm) || c.mobile.includes(searchTerm);
         const matchesDiscount = discountMatch === 'All' || c.discount === discountMatch;
-        return matchesSearch && matchesDiscount;
+        
+        let matchesTime = false;
+        const nameKey = (c.name || '').trim().toLowerCase();
+        if (activeFilter === 'today') {
+            matchesTime = todaysBuyerNames.has(nameKey);
+        } else {
+            matchesTime = pastBuyerNames.has(nameKey);
+        }
+        
+        return matchesSearch && matchesDiscount && matchesTime;
     });
 
     custTableBody.innerHTML = '';
     
+    if (filteredCustomers.length === 0) {
+        custTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 20px;">No customers found matching this view.</td></tr>`;
+        return;
+    }
+
     filteredCustomers.forEach(customer => {
         let discountBadgeClass = 'status-instock'; // green default
 
@@ -73,7 +133,6 @@ function renderCustomersTable() {
                 <div class="action-btns">
                     <button class="action-btn" onclick="viewCustomerHistory(${customer.id})" title="View Purchase History"><i class="fa-solid fa-clock-rotate-left"></i></button>
                     <button class="action-btn edit-btn" onclick="openModal('edit', ${customer.id})" title="Edit Details & Discount"><i class="fa-solid fa-pen"></i></button>
-                    <button class="action-btn delete-btn" onclick="deleteCustomer(${customer.id})" title="Delete"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </td>
         `;
@@ -82,30 +141,44 @@ function renderCustomersTable() {
 }
 
 // Update Dashboard Statistics
-function updateCustomerStats() {
-    document.getElementById('totalCustomersCount').innerText = customers.length;
+async function updateCustomerStats() {
+    let orders = [];
+    try {
+        const res = await fetch('/api/orders');
+        const data = await res.json();
+        if (data.success) {
+            orders = data.orders;
+        }
+    } catch (err) {
+        console.error('Failed to load orders for stats:', err);
+    }
 
-    const orders = JSON.parse(localStorage.getItem('grocery_orders')) || [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const todayNames = new Set();
-    const pastNames = new Set();
+    todaysBuyerNames.clear();
+    pastBuyerNames.clear();
 
     orders.forEach(order => {
+        const customerNameKey = (order.customerName || '').trim().toLowerCase();
+        if (!customerNameKey) return;
+        // Only count stats for active/registered customers
+        const customerExists = customers.some(c => (c.name || '').trim().toLowerCase() === customerNameKey);
+        if (!customerExists) return;
+
         const orderDate = new Date(order.date);
         if (orderDate >= today) {
-            todayNames.add(order.customerName.toLowerCase());
+            todaysBuyerNames.add(customerNameKey);
         } else {
-            pastNames.add(order.customerName.toLowerCase());
+            pastBuyerNames.add(customerNameKey);
         }
     });
 
-    if (document.getElementById('pastCustomersCount')) {
-        document.getElementById('pastCustomersCount').innerText = pastNames.size;
+    if (document.getElementById('todaysCustomersCount')) {
+        document.getElementById('todaysCustomersCount').innerText = todaysBuyerNames.size;
     }
-    if (document.getElementById('todayCustomersCount')) {
-        document.getElementById('todayCustomersCount').innerText = todayNames.size;
+    if (document.getElementById('pastCustomersCount')) {
+        document.getElementById('pastCustomersCount').innerText = pastBuyerNames.size;
     }
 }
 
@@ -120,7 +193,7 @@ function openModal(action, id = null) {
         document.getElementById('customerDiscount').value = 'None';
         
     } else if (action === 'edit') {
-        const customer = customers.find(c => c.id === id);
+        const customer = customers.find(c => c.id == id);
         document.getElementById('modalTitle').innerText = `Update: ${customer.name}`;
         document.getElementById('customerId').value = customer.id;
         document.getElementById('customerName').value = customer.name;
@@ -133,12 +206,12 @@ function openModal(action, id = null) {
     if (custModal) custModal.classList.add('show');
 }
 
-function closeCustomerModal() {
+function closeModal() {
     if (custModal) custModal.classList.remove('show');
 }
 
 // Handle Form Submission
-customerForm.addEventListener('submit', (e) => {
+customerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const action = document.getElementById('actionType').value;
     const id = parseInt(document.getElementById('customerId').value);
@@ -149,50 +222,55 @@ customerForm.addEventListener('submit', (e) => {
     const address = document.getElementById('customerAddress').value;
     const discount = document.getElementById('customerDiscount').value;
     
-    if (action === 'add') {
-        customers.unshift({
-            id: generateId(),
-            name, mobile, email, address, discount
-        });
-        showToast('success', 'Customer Added', `${name} successfully added to database.`);
-        
-    } else if (action === 'edit') {
-        const index = customers.findIndex(c => c.id === id);
-        customers[index] = { id, name, mobile, email, address, discount };
-        showToast('success', 'Profile Updated', `${name}'s discount preference is now set to ${discount}.`);
+    let payload = { name, mobile, email, address, discount };
+    if (action === 'edit') {
+        payload.id = id;
     }
     
-    saveCustomers(); // Persist DB
-    closeCustomerModal();
-    initCustomers(); // Refresh UI
+    try {
+        const res = await fetch('/api/customers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('success', 'Saved Successfully', data.message);
+        } else {
+            showToast('error', 'Error', data.message);
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('error', 'Network Error', 'Failed to save customer to database.');
+    }
+    
+    closeModal();
+    await initCustomers(); // Refresh UI
 });
 
-// Delete Customer
-function deleteCustomer(id) {
-    if(confirm("Are you sure you want to permanently delete this customer's profile?")) {
-        const customer = customers.find(c => c.id === id);
-        customers = customers.filter(c => c.id !== id);
-        saveCustomers(); // Persist DB
-        showToast('warning', 'Customer Removed', `${customer.name} deleted successfully.`);
-        initCustomers();
-    }
-}
+
 
 // History Modal Logic
 const historyModal = document.getElementById('historyModal');
 
-function viewCustomerHistory(id) {
+async function viewCustomerHistory(id) {
     const customer = customers.find(c => c.id === id);
     if (!customer) return;
 
     document.getElementById('historyModalTitle').innerText = `${customer.name}'s History`;
 
-    const allOrders = JSON.parse(localStorage.getItem('grocery_orders')) || [];
+    let allOrders = [];
+    try {
+        const res = await fetch('/api/orders');
+        const data = await res.json();
+        if (data.success) {
+            allOrders = data.orders;
+        }
+    } catch (err) {
+        console.error('Failed to load orders history:', err);
+    }
     
-    // In our rudimentary "DB", we identify the same customer by their exact name.
-    // In a production SQL DB, this would map directly to customer_id foreign keys,
-    // but here we just filter the order history objects based on their stored customerName.
-    const customerOrders = allOrders.filter(o => o.customerName === customer.name);
+    const customerOrders = allOrders.filter(o => o.customerName.toLowerCase() === customer.name.toLowerCase());
 
     let lifetimeValue = 0;
     const historyTableBody = document.getElementById('historyTableBody');

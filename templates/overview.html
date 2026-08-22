@@ -73,7 +73,7 @@
     <nav class="sidebar">
         <div class="logo">
             <div class="logo-icon"><i class="fa-solid fa-basket-shopping"></i></div>
-            <h2>FreshAdmin</h2>
+            <h2>GrocerPro</h2>
         </div>
         <ul class="nav-links">
             <li class="active"><a href="/overview"><i class="fa-solid fa-chart-pie"></i> Today's Selling</a></li>
@@ -98,8 +98,8 @@
             </div>
             <div class="topbar-right">
                 <div class="user-profile">
-                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=10b981&color=fff" alt="Profile">
-                    <span>Admin User</span>
+                    <img src="https://ui-avatars.com/api/?name={{ session.get('name', 'Admin+User')|urlencode }}&background=10b981&color=fff" alt="Profile">
+                    <span>{{ session.get('name', 'Admin User') }}</span>
                 </div>
             </div>
         </header>
@@ -121,7 +121,7 @@
         <!-- Past Customer Order History Table -->
         <div style="padding: 0 40px 40px;">
             <div class="section-header" style="margin-bottom: 24px;">
-                <h2 style="font-size: 20px; font-weight: 600; color: var(--text-primary)">Past Customer Billings</h2>
+                <h2 style="font-size: 20px; font-weight: 600; color: var(--text-primary)">Today's Customer Billings</h2>
             </div>
             <div class="table-container">
                 <table id="pastOrdersTable">

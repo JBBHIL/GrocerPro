@@ -1,17 +1,21 @@
-// Initial Mock Data Fallback
-const defaultProducts = [
-    { id: 1, name: "Organic Avocados", category: "Fruits", price: 299, stock: 45, icon: "https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&q=80&w=200" },
-    { id: 2, name: "Whole Milk 1L", category: "Dairy", price: 65, stock: 12, icon: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=200" },
-    { id: 3, name: "Farm Fresh Eggs (12)", category: "Dairy", price: 80, stock: 3, icon: "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?auto=format&fit=crop&q=80&w=200" },
-    { id: 4, name: "Sourdough Bread", category: "Bakery", price: 120, stock: 0, icon: "https://images.unsplash.com/photo-1585445422617-30198a2eb8fb?auto=format&fit=crop&q=80&w=200" },
-    { id: 5, name: "Premium Beef Steak", category: "Meat", price: 599, stock: 8, icon: "https://images.unsplash.com/photo-1603048297172-c92544798d5e?auto=format&fit=crop&q=80&w=200" },
-    { id: 6, name: "Fresh Spinach", category: "Vegetables", price: 40, stock: 25, icon: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&q=80&w=200" }
-];
+// In-memory products array synced with database
+let products = [];
 
-let products = JSON.parse(localStorage.getItem('grocery_products')) || defaultProducts;
+// Load products from backend SQLite
+async function loadProductsFromServer() {
+    try {
+        const res = await fetch('/api/products');
+        const data = await res.json();
+        if (data.success) {
+            products = data.products;
+        }
+    } catch (err) {
+        console.error('Failed to load products from server:', err);
+    }
+}
 
 // Utility functions
-const saveProducts = () => localStorage.setItem('grocery_products', JSON.stringify(products));
+const saveProducts = () => {}; // No-op now as database manages persistence
 const formatCurrency = (amount) => `₹${parseFloat(amount).toFixed(2)}`;
 const generateId = () => products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
 
@@ -32,14 +36,26 @@ let currentView = 'table'; // Track active view state
 let activeCardFilter = 'all'; // 'all', 'low_stock', 'sold_today'
 
 // Initialize Dashboard
-function init() {
+let lastNotifiedStocks = {};
+let listenersSetup = false;
+
+async function init() {
     setupCardListeners();
+    await loadProductsFromServer();
+    
+    // Initialize stock levels without showing toasts
+    products.forEach(p => {
+        lastNotifiedStocks[p.id] = p.stock;
+    });
+
     if (tableBody) renderDashboardView();
-    if (document.getElementById('totalProductsCount')) updateDashboardStats();
-    if (document.getElementById('notificationBadge')) checkStockAlerts();
+    if (document.getElementById('totalProductsCount')) await updateDashboardStats();
+    if (document.getElementById('notificationBadge')) checkStockAlerts(true);
 }
 
 function setupCardListeners() {
+    if (listenersSetup) return;
+    listenersSetup = true;
     const cardTotal = document.getElementById('cardTotalProducts');
     const cardLow = document.getElementById('cardLowStock');
     const cardSold = document.getElementById('cardItemsSoldToday');
@@ -70,7 +86,7 @@ function setActiveCard(filter) {
     renderDashboardView();
 }
 
-function renderDashboardView() {
+async function renderDashboardView() {
     const titleEl = document.getElementById('sectionTitle');
     const actionsEl = document.getElementById('inventoryActions');
     const invTableContainer = document.getElementById('inventoryTableContainer');
@@ -82,7 +98,7 @@ function renderDashboardView() {
         if (invTableContainer) invTableContainer.style.display = 'none';
         if (gridContainer) gridContainer.style.display = 'none';
         if (salesTableContainer) salesTableContainer.style.display = 'block';
-        renderSalesTable();
+        await renderSalesTable();
     } else {
         if (titleEl) {
             titleEl.innerText = activeCardFilter === 'low_stock' ? "Inventory Management - Low Stock" : "Inventory Management";
@@ -101,12 +117,24 @@ function renderDashboardView() {
     }
 }
 
-function renderSalesTable() {
+async function renderSalesTable() {
     const salesTableBody = document.getElementById('salesTableBody');
     if (!salesTableBody) return;
     
-    const orders = JSON.parse(localStorage.getItem('grocery_orders')) || [];
-    const customers = JSON.parse(localStorage.getItem('grocery_customers')) || [];
+    let orders = [];
+    let customers = [];
+    
+    try {
+        const ordersRes = await fetch('/api/orders');
+        const ordersData = await ordersRes.json();
+        if (ordersData.success) orders = ordersData.orders;
+
+        const customersRes = await fetch('/api/customers');
+        const customersData = await customersRes.json();
+        if (customersData.success) customers = customersData.customers;
+    } catch (err) {
+        console.error('Failed to load sales data:', err);
+    }
     
     const today = new Date().toLocaleDateString();
     const todayOrders = orders.filter(order => {
@@ -278,7 +306,7 @@ function switchView(view) {
 }
 
 // Update Dashboard Statistics
-function updateDashboardStats() {
+async function updateDashboardStats() {
     // Total Products
     if(document.getElementById('totalProductsCount')) {
         document.getElementById('totalProductsCount').innerText = products.length;
@@ -290,42 +318,56 @@ function updateDashboardStats() {
         document.getElementById('lowStockCount').innerText = lowStock;
     }
 
-    // Today's Sales Calculations
-    const orders = JSON.parse(localStorage.getItem('grocery_orders')) || [];
-    const today = new Date().toLocaleDateString();
-    
-    const todayOrders = orders.filter(order => {
-        return new Date(order.date).toLocaleDateString() === today;
-    });
+    try {
+        const res = await fetch('/api/orders');
+        const data = await res.json();
+        if (data.success) {
+            const orders = data.orders;
+            const today = new Date().toLocaleDateString();
+            
+            const todayOrders = orders.filter(order => {
+                return new Date(order.date).toLocaleDateString() === today;
+            });
 
-    // Items Sold Today
-    if(document.getElementById('itemsSoldToday')) {
-        const totalItemsSold = todayOrders.reduce((sum, order) => {
-            return sum + order.items.reduce((itemSum, item) => itemSum + item.qty, 0);
-        }, 0);
-        document.getElementById('itemsSoldToday').innerText = totalItemsSold;
-    }
+            // Items Sold Today
+            if(document.getElementById('itemsSoldToday')) {
+                const totalItemsSold = todayOrders.reduce((sum, order) => {
+                    return sum + order.items.reduce((itemSum, item) => itemSum + item.qty, 0);
+                }, 0);
+                document.getElementById('itemsSoldToday').innerText = totalItemsSold;
+            }
 
-    // Total Payment Today (Revenue Today)
-    if(document.getElementById('totalPaymentToday')) {
-        const totalRevenue = todayOrders.reduce((sum, order) => sum + order.totalAmount, 0);
-        document.getElementById('totalPaymentToday').innerText = formatCurrency(totalRevenue);
+
+            // Total Payment Today (Revenue Today)
+            if(document.getElementById('totalPaymentToday')) {
+                const totalRevenue = todayOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+                document.getElementById('totalPaymentToday').innerText = formatCurrency(totalRevenue);
+            }
+        }
+    } catch (err) {
+        console.error('Failed to load order statistics:', err);
     }
 }
 
 // Notification System for Out of Stock and Low Stock
-function checkStockAlerts() {
+function checkStockAlerts(suppressToast = false) {
     const alertsItems = products.filter(p => p.stock <= 5);
     const badge = document.getElementById('notificationBadge');
     const notifList = document.getElementById('notificationList');
     
-    badge.innerText = alertsItems.length;
-    badge.style.display = alertsItems.length > 0 ? 'flex' : 'none';
+    if (badge) {
+        badge.innerText = alertsItems.length;
+        badge.style.display = alertsItems.length > 0 ? 'flex' : 'none';
+    }
     
-    notifList.innerHTML = '';
+    if (notifList) {
+        notifList.innerHTML = '';
+    }
     
     if (alertsItems.length === 0) {
-        notifList.innerHTML = '<div style="padding:20px; text-align:center; color: #94a3b8;">No alerts right now.</div>';
+        if (notifList) {
+            notifList.innerHTML = '<div style="padding:20px; text-align:center; color: #94a3b8;">No alerts right now.</div>';
+        }
     } else {
         alertsItems.forEach(item => {
             const isAdminNotified = item.stock === 0 ? "completely out of stock" : "running low on stock";
@@ -336,27 +378,54 @@ function checkStockAlerts() {
             const msg = encodeURIComponent(`🚨 ALERT: "${item.name}" is ${isAdminNotified} (${item.stock} remaining) and requires immediate attention!`);
             const waLink = `https://wa.me/${adminPhone}?text=${msg}`;
 
-            notifList.innerHTML += `
-                <div class="notif-item">
-                    <div class="notif-icon"><i class="fa-solid fa-box-open"></i></div>
-                    <div class="notif-content">
-                        <h4>${isCritical ? 'Out of Stock' : 'Low Stock'} Alert</h4>
-                        <p style="margin-bottom: 8px;"><strong>${item.name}</strong> has ${item.stock} units left.</p>
-                        <a href="${waLink}" target="_blank" class="wa-btn">
-                            <i class="fa-brands fa-whatsapp"></i> Notify via WhatsApp
-                        </a>
+            if (notifList) {
+                notifList.innerHTML += `
+                    <div class="notif-item">
+                        <div class="notif-icon"><i class="fa-solid fa-box-open"></i></div>
+                        <div class="notif-content">
+                            <h4>${isCritical ? 'Out of Stock' : 'Low Stock'} Alert</h4>
+                            <p style="margin-bottom: 8px;"><strong>${item.name}</strong> has ${item.stock} units left.</p>
+                            <a href="${waLink}" target="_blank" class="wa-btn">
+                                <i class="fa-brands fa-whatsapp"></i> Notify via WhatsApp
+                            </a>
+                        </div>
                     </div>
-                </div>
-            `;
-            // Trigger visual toast for out of stock on load/update
-            if(isCritical) {
-              showToast('error', 'Out of Stock Alert', `${item.name} is entirely out of stock.`);
-            } else {
-              showToast('warning', 'Low Stock Alert', `${item.name} is running low (${item.stock} left).`);
+                `;
             }
+            
+            // Trigger visual toast for out of stock on load/update
+            const prevStock = lastNotifiedStocks[item.id];
+            if (!suppressToast) {
+                if (prevStock === undefined || prevStock > item.stock) {
+                    if (isCritical) {
+                        showToast('error', 'Out of Stock Alert', `${item.name} is entirely out of stock.`);
+                    } else if (prevStock === undefined || prevStock > 5) {
+                        showToast('warning', 'Low Stock Alert', `${item.name} is running low (${item.stock} left).`);
+                    }
+                }
+            }
+            lastNotifiedStocks[item.id] = item.stock;
         });
     }
+
+    // Cleanup removed products
+    Object.keys(lastNotifiedStocks).forEach(id => {
+        if (!products.find(p => p.id == id)) {
+            delete lastNotifiedStocks[id];
+        }
+    });
 }
+
+// Periodic background refresh every 5 seconds for dashboard (runs only if tab is visible)
+setInterval(async () => {
+    if (document.hidden) return;
+    if (typeof loadProductsFromServer === 'function') {
+        await loadProductsFromServer();
+        if (tableBody) renderDashboardView();
+        if (document.getElementById('totalProductsCount')) await updateDashboardStats();
+        if (document.getElementById('notificationBadge')) checkStockAlerts(false);
+    }
+}, 5000);
 
 // Modal Logic
 function openModal(action, id = null) {
@@ -438,7 +507,7 @@ if (imageBtn) {
 
 // Handle Form Submission
 if (productForm) {
-    productForm.addEventListener('submit', (e) => {
+    productForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const action = document.getElementById('actionType').value;
         const id = parseInt(document.getElementById('productId').value);
@@ -454,44 +523,57 @@ if (productForm) {
             uploadedIcon = "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=200"; 
         }
         
-        if (action === 'add') {
-            products.unshift({
-                id: generateId(),
-                name,
-                category,
-                price,
-                stock: stockInput,
-                icon: uploadedIcon
-            });
-            showToast('success', 'Product Added', `${name} added to inventory.`);
-            
-        } else if (action === 'edit') {
-            const index = products.findIndex(p => p.id === id);
-            products[index] = { ...products[index], name, category, price, stock: stockInput, icon: uploadedIcon };
-            showToast('success', 'Product Updated', `${name} details updated.`);
-            
-        } else if (action === 'stock') {
-            const index = products.findIndex(p => p.id === id);
-            const addedStock = isNaN(stockInput) ? 0 : stockInput;
-            products[index].stock += addedStock;
-            products[index].price = price; // Update price as well
-            showToast('success', 'Stock Added', `Added ${addedStock} units to ${products[index].name}. Price updated to ₹${price}.`);
+        let payload = { name, category, price, stock: stockInput, icon: uploadedIcon };
+        if (action === 'edit' || action === 'stock') {
+            payload.id = id;
+            if (action === 'stock') {
+                const product = products.find(p => p.id === id);
+                const addedStock = isNaN(stockInput) ? 0 : stockInput;
+                payload.stock = product.stock + addedStock;
+            }
         }
         
-        saveProducts(); // Save DB changes
+        try {
+            const res = await fetch('/api/products', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('success', 'Saved Successfully', data.message);
+            } else {
+                showToast('error', 'Error', data.message);
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('error', 'Network Error', 'Failed to save product to backend database.');
+        }
+        
         closeModal();
-        init(); // Refresh UI
+        await init(); // Refresh UI
     });
 }
 
 // Delete Product
-function deleteProduct(id) {
+async function deleteProduct(id) {
     if(confirm("Are you sure you want to remove this product from inventory?")) {
         const product = products.find(p => p.id === id);
-        products = products.filter(p => p.id !== id);
-        saveProducts(); // Save DB changes
-        showToast('warning', 'Product Removed', `${product.name} deleted successfully.`);
-        init();
+        try {
+            const res = await fetch(`/api/products/${id}`, {
+                method: 'DELETE'
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('warning', 'Product Removed', `${product.name} deleted successfully.`);
+            } else {
+                showToast('error', 'Error', data.message);
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('error', 'Network Error', 'Failed to remove product.');
+        }
+        await init();
     }
 }
 

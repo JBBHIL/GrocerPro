@@ -1,12 +1,21 @@
 // Get global order history 
-let orders = JSON.parse(localStorage.getItem('grocery_orders')) || [];
+let orders = [];
 
 // Elements
 const analyticsTableBody = document.getElementById('analyticsTableBody');
 const analyticsSearch = document.getElementById('analyticsSearch');
 const paymentFilter = document.getElementById('paymentFilter');
 
-function initAnalytics() {
+async function initAnalytics() {
+    try {
+        const res = await fetch('/api/orders');
+        const data = await res.json();
+        if (data.success) {
+            orders = data.orders;
+        }
+    } catch (err) {
+        console.error('Failed to load orders for analytics:', err);
+    }
     renderAnalyticsTable();
     updateAnalyticsStats();
 }
