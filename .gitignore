@@ -1,0 +1,21 @@
+# SQLite local databases
+users.db
+*.db
+*.db-journal
+*.db-wal
+
+# Python environment and caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+.env
+
+# Editor / System configurations
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
